@@ -2,6 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
+#include <unistd.h>
+
+#define PROGRESS_STEP printf ( "." ); fflush ( stdout );
+#define PROGRESS_FAIL1(err) \
+    { printf ( "\n" ); fprintf ( stderr, err ); goto fail; }
+#define PROGRESS_FAIL2(err, arg) \
+    { printf ( "\n" ); fprintf ( stderr, err, arg ); goto fail; }
 
 #define HDR_SIZE 16
 #define DSK_SIZE 65500
@@ -58,12 +66,12 @@ void usage ( )
     fprintf ( stderr,
         "\nUsage: fdspatch [options] file\n"
         "Options:\n"
-        "  --print,-p     Display information about the FDS file. This is\n"
-        "                 the default action.\n"
-        "  --convert, -c  Convert (patch) the FDS file if required, by\n"
-        "                 adding the FDSLoader header. Files that already\n"
-        "                 have this header, or that are considered invalid,\n"
-        "                 will be left unchanged.\n" );
+        "  --print,-p    Display information about the FDS file. This is\n"
+        "                the default action.\n"
+        "  --convert,-c  Convert (patch) the FDS file if required, by\n"
+        "                adding the FDSLoader header. Files that already\n"
+        "                have this header, or that are considered invalid,\n"
+        "                will be left unchanged.\n" );
 }
 
 int get_options ( int argc, char** argv, flags_t* flags )
@@ -207,6 +215,69 @@ int action_print ( const class_t* cls )
     return 0;
 }
 
+int action_convert ( const class_t* cls,
+                     byte_t* buf,
+                     size_t len,
+                     const char* fn )
+{
+    char * tmpfn = NULL,
+         * tmpdir,
+         * fncpy;
+    FILE* tmpfh;
+    size_t fnlen, wlen;
+
+    if ( cls->has_hdr )
+        return 0;
+
+    fnlen = strlen ( fn );
+    if ( ! ( fncpy = ( char * ) malloc ( fnlen + 1 ) ) )
+        abort ( );
+    memcpy ( fncpy, fn, fnlen + 1 );
+
+    printf ( "Patching %s ", fn );
+    PROGRESS_STEP
+
+    memmove ( buf + HDR_SIZE, buf, len );
+    memcpy ( buf, cls->num_dsk == 2 ? header_2d : header_1d, HDR_SIZE );
+    len += HDR_SIZE;
+    PROGRESS_STEP
+
+    if ( ! ( tmpdir = dirname ( fncpy ) ) )
+        PROGRESS_FAIL2( "Failed to get dir name of %s\n", fn );
+    PROGRESS_STEP
+
+    if ( ! ( tmpfn = tempnam ( tmpdir, "FP" ) ) )
+        PROGRESS_FAIL1( "Failed to create temp file name\n" )
+    PROGRESS_STEP
+
+    if ( ! ( tmpfh = fopen ( tmpfn, "wb" ) ) )
+        PROGRESS_FAIL2( "Failed to open temp file %s\n", tmpfn )
+    PROGRESS_STEP
+
+    if ( ( wlen = fwrite ( buf, 1, len, tmpfh ) ) != len )
+        PROGRESS_FAIL2( "Failed to write to temp file %s\n", tmpfn )
+    PROGRESS_STEP
+
+    if ( fclose ( tmpfh ) )
+        PROGRESS_FAIL2( "Failed to close temp file %s\n", tmpfn );
+    PROGRESS_STEP
+
+    if ( unlink ( fn ) )
+        PROGRESS_FAIL2( "Failed to remove original %s\n", fn );
+    PROGRESS_STEP
+
+    if ( rename ( tmpfn, fn ) )
+        PROGRESS_FAIL2( "Failed to copy temp file %s over original\n",
+                        tmpfn );
+    printf ( "OK\n" );
+    return 0;
+
+fail:
+    if ( tmpfn )
+        unlink ( tmpfn );
+    return 1;
+}
+
 int main ( int argc, char** argv )
 {
     FILE* fh;
@@ -226,8 +297,7 @@ int main ( int argc, char** argv )
         return 1;
 
     if ( flags.action == ACTION_CONVERT )
-    {
-    }
+        return action_convert ( &cls, buf, flen, argv [ argc - 1 ] );
     else
         return action_print ( &cls );
 }
