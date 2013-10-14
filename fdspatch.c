@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <libgen.h>
+#ifndef __DJGPP__
+#  include <libgen.h>
+#endif
 
 #define PROGRESS_STEP printf ( "." ); fflush ( stdout );
 #define PROGRESS_FAIL1(err) \
