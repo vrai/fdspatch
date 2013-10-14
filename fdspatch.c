@@ -1,3 +1,20 @@
+/* Copyright (c) 2013, Vrai Stacey
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,20 +75,33 @@ typedef struct
 void usage ( )
 {
     fprintf ( stderr,
-        "\nUsage: fdspatch [options] file\n"
+        "\nUsage: fdspatch [options] file\n\n"
+        "By default will attempt to load and parse the header of a Famicom\n"
+        "Disk System image file (.FDS format). In convert mode will\n"
+        "prepend the FDSLoadr header to an image if it is missing it.\n"
+        "Images that already have such a header will not be changed.\n\n"
         "Options:\n"
         "  -p  Display information about the FDS file. This is the\n"
         "      default action.\n"
         "  -c  Convert (patch) the FDS file if required, by adding the\n"
         "      FDSLoader header. Files that already have this header, or\n"
-        "      that are considered invalid, will be left unchanged.\n" );
+        "      that are considered invalid, will be left unchanged.\n"
+        "  -v  Display version information.\n" );
+}
+
+void version ( )
+{
+    printf (
+        "fdspatch 1.0.0\n"
+        "Licensed under the GNU General Public License, version 2\n"
+        "Please report any bugs to vrai.stacey@gmail.com\n" );
 }
 
 int get_options ( int argc, char** argv, flags_t* flags )
 {
     int ch;
     flags->action = ACTION_PRINT;
-    while ( ( ch = getopt ( argc, argv, "pc" ) ) != -1 )
+    while ( ( ch = getopt ( argc, argv, "pcv" ) ) != -1 )
         switch ( ch )
         {
             case 'p':
@@ -80,6 +110,9 @@ int get_options ( int argc, char** argv, flags_t* flags )
             case 'c':
                 flags->action = ACTION_CONVERT;
                 break;
+            case 'v':
+                version ( );
+                return 1;
             default:
                 usage ( );
                 return 1;
