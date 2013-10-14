@@ -1,9 +1,8 @@
-#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libgen.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #define PROGRESS_STEP printf ( "." ); fflush ( stdout );
 #define PROGRESS_FAIL1(err) \
@@ -54,31 +53,23 @@ typedef struct
     action_t action;
 } flags_t;
 
-static struct option longopts[] =
-{
-    { "print",    no_argument, NULL, 'p' },
-    { "convert",  no_argument, NULL, 'c' },
-    { NULL,       0,           NULL, 0   }
-};
-
 void usage ( )
 {
     fprintf ( stderr,
         "\nUsage: fdspatch [options] file\n"
         "Options:\n"
-        "  --print,-p    Display information about the FDS file. This is\n"
-        "                the default action.\n"
-        "  --convert,-c  Convert (patch) the FDS file if required, by\n"
-        "                adding the FDSLoader header. Files that already\n"
-        "                have this header, or that are considered invalid,\n"
-        "                will be left unchanged.\n" );
+        "  -p  Display information about the FDS file. This is the\n"
+        "      default action.\n"
+        "  -c  Convert (patch) the FDS file if required, by adding the\n"
+        "      FDSLoader header. Files that already have this header, or\n"
+        "      that are considered invalid, will be left unchanged.\n" );
 }
 
 int get_options ( int argc, char** argv, flags_t* flags )
 {
     int ch;
     flags->action = ACTION_PRINT;
-    while ( ( ch = getopt_long ( argc, argv, "pc", longopts, NULL ) ) != -1 )
+    while ( ( ch = getopt ( argc, argv, "pc" ) ) != -1 )
         switch ( ch )
         {
             case 'p':
